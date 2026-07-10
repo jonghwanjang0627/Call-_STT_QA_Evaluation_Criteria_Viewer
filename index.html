@@ -79,11 +79,14 @@ body.gate-locked{overflow:hidden;}
 .qa-head-row h2{margin:0;border:none;padding:0;}
 .qa-actions{display:flex;align-items:center;gap:8px;}
 .hq-user{font-size:11.5px;color:#777;margin-right:4px;}
-.hq-action-btn{font-size:12.5px;font-weight:700;padding:7px 14px;border:none;border-radius:8px;cursor:pointer;color:#fff;}
-.hq-action-btn.save{background:#3b6fd4;}
-.hq-action-btn.save:hover{background:#2f59ab;}
-.hq-action-btn.export{background:#1a7f4b;}
-.hq-action-btn.export:hover{background:#146139;}
+.hq-action-btn{font-size:12.5px;font-weight:700;padding:7px 14px;border:1px solid #c9ced6;border-radius:8px;cursor:pointer;color:#333;background:#eef0f3;transition:.15s;}
+.hq-action-btn:hover{background:#e2e5ea;border-color:#b6bcc6;}
+.hq-action-btn.save{background:#5b6470;color:#fff;border-color:#5b6470;}
+.hq-action-btn.save:hover{background:#474e58;border-color:#474e58;}
+.hq-action-btn.import{background:#eef0f3;color:#333;}
+.hq-action-btn.import:hover{background:#e2e5ea;}
+.hq-action-btn.export{background:#eef0f3;color:#333;}
+.hq-action-btn.export:hover{background:#e2e5ea;}
 .hq-wrap{margin-top:10px;}
 .hq-btn{background:#A50034;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:700;cursor:pointer;}
 .hq-btn:hover{background:#c8134a;}
@@ -108,6 +111,8 @@ body.gate-locked{overflow:hidden;}
 .qa-prog-count b{color:#3b6fd4;}
 .qa-prog-track{height:14px;background:#e9edf5;border-radius:8px;overflow:hidden;}
 .qa-prog-fill{height:100%;width:0;background:linear-gradient(90deg,#3b6fd4,#5b8def);color:#fff;font-size:9px;line-height:14px;text-align:right;padding-right:6px;border-radius:8px;transition:width .3s ease;white-space:nowrap;}
+.hq-action-btn.has-icon{display:inline-flex;align-items:center;gap:6px;}
+.hq-action-btn .btn-ico{display:inline-block;vertical-align:middle;opacity:.85;}
 </style>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
@@ -117,7 +122,7 @@ body.gate-locked{overflow:hidden;}
 <div id="loginGate">
   <div class="lg-card">
     <div class="lg-brand">LG ELECTRONICS</div>
-    <h1>[ Global QA ] STT Conversation &amp; Evaluation Criteria Viewer</h1>
+    <h1>Human QA Evaluation Results - STT Conversation &amp; Evaluation Criteria Viewer</h1>
     <div class="lg-sub">Sign in to access the detailed dashboard.</div>
     <div class="lg-help">Please enter your authorized email address.</div>
     <input type="email" id="loginEmail" placeholder="name@lge.com" autocomplete="off" />
@@ -128,7 +133,7 @@ body.gate-locked{overflow:hidden;}
 </div>
 
 <header class="top">
-  <h1>Global QA Evaluation Dashboard &mdash; STT &amp; QA Compare</h1>
+  <h1>Human QA Evaluation Results - STT Conversation &amp; Evaluation Criteria Viewer</h1>
   <p>STT conversation (English / Korean / Brazilian Portuguese / Egyptian Arabic) &nbsp;&middot;&nbsp; QA Compare 22 evaluation items &nbsp;&middot;&nbsp; Criteria &amp; scoring (Global QA Evaluation scale v11)</p>
 </header>
 
@@ -158,7 +163,7 @@ body.gate-locked{overflow:hidden;}
       <div class="chat" id="chat"></div>
   </div></div>
   <div class="col-right"><div class="panel">
-      <div class="qa-head-row"><h2>&#128203; QA Compare (22 Evaluation Items)</h2><div class="qa-actions"><span id="hqUser" class="hq-user"></span><button type="button" id="hqSaveBtn" class="hq-action-btn save">Save</button><button type="button" id="hqExportBtn" class="hq-action-btn export">Export</button></div></div>
+      <div class="qa-head-row"><h2>&#128203; QA Compare (22 Evaluation Items)</h2><div class="qa-actions"><span id="hqUser" class="hq-user"></span><button type="button" id="hqSaveBtn" class="hq-action-btn save">Save</button><button type="button" id="hqImportBtn" class="hq-action-btn import has-icon"><svg class="btn-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>Upload</button><input type="file" id="hqImportFile" accept=".xlsx,.xls" style="display:none;"><button type="button" id="hqExportBtn" class="hq-action-btn export has-icon"><svg class="btn-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>Export</button></div></div>
       <div class="qa-summary">
         <div class="qa-score-box"><span class="qa-score-label">Score</span><span class="qa-score-val"><b id="hqScoreObtained">0</b> / <span id="hqScoreTotal">100</span></span></div>
         <div class="qa-prog-box"><div class="qa-prog-top"><span class="qa-prog-label">Human QA Progress</span><span class="qa-prog-count"><b id="hqProgDone">0</b> / <span id="hqProgTotal">22</span> items</span></div><div class="qa-prog-track"><div class="qa-prog-fill" id="hqProgFill">0%</div></div></div>
@@ -329,9 +334,46 @@ buildQA(); loadCall(D.order[0]);
     var ci=document.getElementById('callInput');
     if(ci) ci.addEventListener('keydown', function(ev){ if(ev.key==='Enter') setTimeout(function(){ applyToCards(currentCall()); },0); });
   })();
+  function hqImport(file){
+    if(typeof XLSX==='undefined' || !XLSX.read){ toast('\u26A0 Import needs internet (SheetJS). Open online in Chrome/Edge.'); return; }
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        var wb=XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
+        var ws=wb.Sheets['1. QA compare'] || wb.Sheets[wb.SheetNames[0]];
+        if(!ws){ toast('\u26A0 Sheet "1. QA compare" not found'); return; }
+        function cellVal(addr){ var c=ws[addr]; return (c && c.v!=null) ? c.v : ''; }
+        var store = readStore(EMAIL) || {};
+        var n=0;
+        for(var ci=0; ci<D.order.length; ci++){
+          var cid=D.order[ci];
+          for(var qi=0; qi<D.template.length; qi++){
+            var q=D.template[qi][0];
+            var row=4+ci*22+qi;
+            var sc=cellVal('H'+row);
+            var rs=cellVal('I'+row);
+            var scStr=(sc===''||sc==null)?'':(''+sc);
+            var rsStr=(rs===''||rs==null)?'':(''+rs);
+            if(scStr!=='' || rsStr!==''){
+              if(!store[cid]) store[cid]={};
+              store[cid][q]={score:scStr, reason:rsStr};
+              n++;
+            }
+          }
+        }
+        writeStore(EMAIL, store);
+        HQ = readStore(EMAIL) || {};
+        applyToCards(currentCall());
+        toast('\u2705 Imported '+n+' evaluated item(s) and updated the screen.');
+      }catch(err){ toast('\u26A0 Import failed: '+(err && err.message ? err.message : err)); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
   function wire(){
     var sb=document.getElementById('hqSaveBtn'); if(sb && !sb.__w){ sb.__w=1; sb.addEventListener('click', hqPersist); }
     var eb=document.getElementById('hqExportBtn'); if(eb && !eb.__w){ eb.__w=1; eb.addEventListener('click', hqExport); }
+    var ib=document.getElementById('hqImportBtn'); var ifl=document.getElementById('hqImportFile');
+    if(ib && ifl && !ib.__w){ ib.__w=1; ib.addEventListener('click', function(){ if(!EMAIL){ toast('\u26A0 Please sign in first'); return; } ifl.value=''; ifl.click(); }); ifl.addEventListener('change', function(e){ var f=e.target.files&&e.target.files[0]; if(f) hqImport(f); }); }
   }
   document.addEventListener('DOMContentLoaded', wire); wire(); setTimeout(wire, 300);
   function readStoreSafe(email){ try{ return readStore(email)||{}; }catch(e){ return {}; } }
